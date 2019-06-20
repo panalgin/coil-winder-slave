@@ -1,0 +1,46 @@
+#include "Motor.h"
+#include <Arduino.h>
+
+Motor::Motor(uint8_t pulsePin, uint8_t dirPin, char axis, uint16_t microStepMultiplier) {
+    this->PulsePin = pulsePin;
+    this->DirPin = dirPin;
+    this->Axis = axis;
+    this->MicrostepMultiplier = microStepMultiplier;
+
+    pinMode(this->PulsePin, OUTPUT);
+    pinMode(this->DirPin, OUTPUT);
+
+    this->LastSteppedAt = 0;
+    this->StepInterval = 100;
+
+    this->SetSpeed(200);
+}
+
+void Motor::Step() {
+    if (micros() - this->LastSteppedAt > this->StepInterval) {
+        this->LastSteppedAt = micros();
+
+        digitalWrite(this->PulsePin, HIGH);
+        delayMicroseconds(2);
+        digitalWrite(this->PulsePin, LOW);
+        delayMicroseconds(2);
+    }
+}
+
+void Motor::SetSpeed(uint16_t speed) {
+    this->StepInterval = (60000000 / (speed * 200 * this->MicrostepMultiplier)) - 2;
+    this->MaxSpeed = speed;
+}
+
+void Motor::SetLimitSwitches(uint8_t minSwitchPin, uint8_t maxSwitchPin) {
+    pinMode(minSwitchPin, INPUT_PULLUP);
+    pinMode(maxSwitchPin, INPUT_PULLUP);
+
+    this->MinSwitchPin = minSwitchPin;
+    this->MaxSwitchPin = maxSwitchPin;
+}
+
+void Motor::SetDirection(int8_t direction) {
+    digitalWrite(this->DirPin, direction == 1 ? HIGH : LOW);
+    this->Direction = direction;
+}
