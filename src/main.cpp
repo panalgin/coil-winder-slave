@@ -4,12 +4,11 @@
 #include "MotorController.h"
 
 Motor mainMotor(8, 5, 'X', 8);
-Motor vargelMotor(9, 10, 'Y', 8);
+Motor vargelMotor(9, 10, 'Y', 16);
 
 MotorController controller;
 
 SoftwareSerial com(12, 11);
-
 
 void parseMessage(String* message);
 
@@ -46,9 +45,11 @@ void parseMessage(String *message)
   message->replace("\r", "");
 
   if (message->startsWith("Offset"))
-  {
     controller.Offset();
-  }
+  else if (message->startsWith("Left"))
+    controller.Move('Y', -100);
+  else if (message->startsWith("Right"))
+    controller.Move('Y', 100);
 
   *message = "";
 }

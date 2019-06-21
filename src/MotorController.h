@@ -12,6 +12,8 @@ public:
     MotorController();
     void Initialize();
     void Offset();
+    void Move(char axis, long delta);
+    Motor* Find(char axis);
 };
 
 #endif
