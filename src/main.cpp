@@ -5,10 +5,15 @@
 
 typedef struct
 {
-  char Axis;
-  long Delta;
-  uint16_t Speed;
-  bool IsFixed;
+  char Axis[2];
+  long Delta[2];
+  uint16_t Speed[2];
+} Parameter;
+
+typedef struct
+{
+  uint8_t No;
+  Parameter Params;
 } Gcode;
 
 Motor mainMotor(8, 5, 'X', 8);
@@ -22,11 +27,12 @@ SoftwareSerial com(12, 11);
 
 void parseMessage(String *message);
 void loopSteps();
+void parseWork(String* message);
+String SplitValues(String* data, char seperator, uint8_t index);
 
 void setup()
 {
   com.begin(115200);
-
   Serial.begin(115200);
 
   controller.Initialize();
@@ -67,11 +73,24 @@ void loopSteps()
   if (Codes.count() > 0 && controller.IsCompleted())
   {
     Gcode code = Codes.pop();
+    Parameter params = code.Params;
 
-    if (!code.IsFixed)
-      controller.Move(code.Axis, (long)(code.Delta > 0 ? INT32_MAX : INT32_MIN), code.Speed);
-    else
-      controller.Move(code.Axis, code.Delta, code.Speed);
+    if (code.No == 1)
+    {
+      char axis = params.Axis[0];
+      long delta = params.Delta[0];
+      uint16_t speed = params.Speed[0];
+
+      controller.Move(axis, (long)(delta > 0 ? INT32_MAX : INT32_MIN), speed);
+    }
+    else if (code.No == 0)
+    {
+      char axis = params.Axis[0];
+      long delta = params.Delta[0];
+      uint16_t speed = params.Speed[0];
+
+      controller.Move(axis, delta, speed);
+    }
   }
 
   if (!controller.IsCompleted())
@@ -98,17 +117,24 @@ void parseMessage(String *message)
 
     delay(500);
 
-    controller.Move('Y', delta, 300);
+    Parameter p = {{'Y'}, {delta}, {300}};
+    Gcode code = {0, p};
+
+    Codes.push(code);
   }
 
   else if (message->startsWith("Left"))
   {
-    Gcode code = {'Y', -10, 10, false};
+    Parameter p = {{'Y'}, {-10}, {10}};
+    Gcode code = {1, p};
+
     Codes.push(code);
   }
   else if (message->startsWith("Right"))
   {
-    Gcode code = {'Y', 10, 10, false};
+    Parameter p = {{'Y'}, {10}, {10}};
+    Gcode code = {1, p};
+
     Codes.push(code);
   }
   else if (message->startsWith("Stop"))
@@ -116,6 +142,44 @@ void parseMessage(String *message)
     Codes.clear();
     controller.Halt();
   }
+  else if (message->startsWith("Work: ")) {
+
+  }
 
   *message = "";
 }
+
+void parseWork(String* message) {
+  message->replace("Work: ", "");
+
+  float wireDiameter = SplitValues(message, '|', 0).toFloat();
+  float totalTurns = SplitValues(message, '|', 1).toFloat();
+
+  float totalGap = (controller.KarkasEndsAt - controller.KarkasBeginsAt) / controller.BaseMetricInSteps;
+  float turnsPerLayer = totalGap / wireDiameter;
+
+  Serial.print("Tel Capi: ");
+  Serial.println(wireDiameter);
+  Serial.print("Toplam Spir: ");
+  Serial.println(totalTurns);
+  Serial.print("Karkas Boslugu: ");
+  Serial.println(totalGap);
+  Serial.print("Her sira tur: ");
+  Serial.println(turnsPerLayer);
+}
+
+String SplitValues(String* data, char seperator, uint8_t index) {
+		int found = 0;
+		int strIndex[] = { 0, -1 };
+		int maxIndex = data->length() - 1;
+
+		for (int i = 0; i <= maxIndex && found <= index; i++) {
+			if (data->charAt(i) == seperator || i == maxIndex) {
+				found++;
+				strIndex[0] = strIndex[1] + 1;
+				strIndex[1] = (i == maxIndex) ? i + 1 : i;
+			}
+		}
+
+		return found > index ? data->substring(strIndex[0], strIndex[1]) : "";
+	};

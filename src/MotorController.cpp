@@ -3,11 +3,12 @@
 
 MotorController::MotorController()
 {
+  this->BaseMetricInSteps = 152.86625;
 }
 
 void MotorController::Initialize()
 {
-  
+
 }
 
 void MotorController::Offset(const char* position)

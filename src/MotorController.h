@@ -21,7 +21,7 @@ public:
 
     long KarkasBeginsAt;
     long KarkasEndsAt;
-    
+    float BaseMetricInSteps;
 };
 
 #endif
