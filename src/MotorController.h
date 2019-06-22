@@ -12,8 +12,11 @@ public:
     MotorController();
     void Initialize();
     void Offset();
-    void Move(char axis, long delta);
+    void Move(char axis, long delta, uint16_t speed);
     Motor* Find(char axis);
+    bool IsCompleted();
+    void Sync();
+    void Halt();
 };
 
 #endif

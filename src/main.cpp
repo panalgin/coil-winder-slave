@@ -7,6 +7,7 @@ typedef struct {
   char Axis;
   long Delta;
   uint16_t Speed;
+  bool IsFixed;
 } Gcode;
 
 
@@ -16,7 +17,7 @@ Motor vargelMotor(9, 6, 'Y', 16);
 MotorController controller;
 
 
-Queue<Gcode> Codes[16];
+Queue<Gcode> Codes(16);
 
 SoftwareSerial com(12, 11);
 
@@ -62,9 +63,16 @@ long lastSteps = 0;
 
 void loopSteps()
 {
-  if (supposedToRun)
+  if (Codes.count() > 0 && controller.IsCompleted())
   {
-    controller.Move('Y', lastSteps);
+    Gcode code = Codes.pop();
+
+    if (!code.IsFixed)
+      controller.Move(code.Axis, (long)(code.Delta > 0 ? INT32_MAX : INT32_MIN), code.Speed);
+  }
+
+  if (!controller.IsCompleted()) {
+    controller.Sync();
   }
 }
 
@@ -76,22 +84,18 @@ void parseMessage(String *message)
     controller.Offset();
   else if (message->startsWith("Left"))
   {
-    supposedToRun = true;
-    lastSteps = -10;
-    vargelMotor.SetSpeed(50);
-    //controller.Move('Y', -100);
+    Gcode code = { 'Y', -10, 30, false };
+    Codes.push(code);
   }
   else if (message->startsWith("Right"))
   {
-    supposedToRun = true;
-    lastSteps = 10;
-    vargelMotor.SetSpeed(50);
-    //controller.Move('Y', 100);
+    Gcode code = { 'Y', 10, 30, false };
+    Codes.push(code);
   }
   else if (message->startsWith("Stop"))
   {
-    supposedToRun = false;
-    lastSteps = 0;
+    Codes.clear();
+    controller.Halt();
   }
 
   *message = "";

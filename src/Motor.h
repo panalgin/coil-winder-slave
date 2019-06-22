@@ -26,6 +26,8 @@ public:
 
     int8_t Direction;
 
+    unsigned long StepsRemaining;
+
     Motor(uint8_t pulsePin, uint8_t dirPin, char axis, uint16_t microStepMultiplier);
     void SetLimitSwitches(uint8_t minSwitchPin, uint8_t maxSwitchPin);
     void Step();

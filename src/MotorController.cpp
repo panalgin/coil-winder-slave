@@ -33,7 +33,7 @@ void MotorController::Offset()
     Serial.println(F("Offset: Bitti"));
 }
 
-void MotorController:: Move(char axis, long steps)
+void MotorController::Move(char axis, long steps, uint16_t speed)
 {
     Motor *target = this->Find(axis);
 
@@ -42,19 +42,34 @@ void MotorController:: Move(char axis, long steps)
         Serial.println(target->Axis);
         Serial.println(steps);
 
+        target->SetSpeed(speed);
+
         if (steps < 0)
             target->SetDirection(Backwards);
         else
             target->SetDirection(Forwards);
 
-        long covered = 0;
         long delta = abs(steps);
+        target->StepsRemaining = delta;
+    }
+}
 
-        while (covered < delta)
-        {
+bool MotorController::IsCompleted()
+{
+    Motor *x = this->Motors[0];
+    Motor *y = this->Motors[1];
+
+    return x->StepsRemaining == 0 && y->StepsRemaining == 0;
+}
+
+void MotorController::Sync()
+{
+    for (uint8_t i = 0; i < 2; i++)
+    {
+        Motor *target = this->Motors[i];
+
+        if (target->StepsRemaining > 0)
             target->Step();
-            covered++;
-        }
     }
 }
 
@@ -67,6 +82,14 @@ Motor *MotorController::Find(char axis)
     }
 
     return NULL;
+}
+
+void MotorController::Halt() {
+    Motor* x = this->Motors[0];
+    Motor* y = this->Motors[1];
+
+    x->StepsRemaining = 0;
+    y->StepsRemaining = 0;
 }
 
 /*/void MotorController::LinearMove(long steps1, long steps2, Motor *first, Motor *second) {

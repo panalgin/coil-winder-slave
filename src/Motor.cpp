@@ -7,6 +7,7 @@ Motor::Motor(uint8_t pulsePin, uint8_t dirPin, char axis, uint16_t microStepMult
     this->DirPin = dirPin;
     this->Axis = axis;
     this->MicrostepMultiplier = microStepMultiplier;
+    this->StepsRemaining = 0;
 
     pinMode(this->PulsePin, OUTPUT);
     pinMode(this->DirPin, OUTPUT);
@@ -19,18 +20,22 @@ Motor::Motor(uint8_t pulsePin, uint8_t dirPin, char axis, uint16_t microStepMult
 
 void Motor::Step()
 {
-    while (true)
-    {
-        if (micros() - this->LastSteppedAt > this->StepInterval)
+    if (this->StepsRemaining > 0) {
+        while (true)
         {
-            this->LastSteppedAt = micros();
+            if (micros() - this->LastSteppedAt > this->StepInterval)
+            {
+                this->LastSteppedAt = micros();
 
-            digitalWrite(this->PulsePin, HIGH);
-            delayMicroseconds(1);
-            digitalWrite(this->PulsePin, LOW);
-            delayMicroseconds(1);
+                digitalWrite(this->PulsePin, HIGH);
+                delayMicroseconds(1);
+                digitalWrite(this->PulsePin, LOW);
+                delayMicroseconds(1);
 
-            break;
+                this->StepsRemaining--;
+
+                break;
+            }
         }
     }
 }
