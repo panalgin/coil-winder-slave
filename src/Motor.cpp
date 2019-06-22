@@ -34,6 +34,11 @@ void Motor::Step()
 
                 this->StepsRemaining--;
 
+                if (this->Direction == -1)
+                    this->CurrentPosition--;
+                else
+                    this->CurrentPosition++;
+                    
                 break;
             }
         }

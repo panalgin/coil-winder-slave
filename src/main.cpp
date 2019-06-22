@@ -80,16 +80,23 @@ void parseMessage(String *message)
 {
   message->replace("\r", "");
 
-  if (message->startsWith("Offset"))
-    controller.Offset();
+  if (message->startsWith("Offset-First")) {
+    controller.Offset("First");
+    com.println("Offset-First-Done");
+  }
+  else if (message->startsWith("Offset-Second")) {
+    controller.Offset("Second");
+    com.println("Offset-Second-Done");
+  }
+
   else if (message->startsWith("Left"))
   {
-    Gcode code = { 'Y', -10, 30, false };
+    Gcode code = { 'Y', -10, 10, false };
     Codes.push(code);
   }
   else if (message->startsWith("Right"))
   {
-    Gcode code = { 'Y', 10, 30, false };
+    Gcode code = { 'Y', 10, 10, false };
     Codes.push(code);
   }
   else if (message->startsWith("Stop"))

@@ -9,87 +9,88 @@ void MotorController::Initialize()
 {
 }
 
-void MotorController::Offset()
+void MotorController::Offset(const char* position)
 {
-    Serial.println("Offset: Basliyor");
+  Motor *y = this->Motors[0];
 
-    Motor *vargel = this->Motors[1];
-    uint8_t state = digitalRead(vargel->MinSwitchPin);
+  if (strcmp(position, "First") == 0)
+  {
+    y->CurrentPosition = 0;
+    this->KarkasBeginsAt = y->CurrentPosition;
 
-    vargel->SetDirection(Backwards);
-    unsigned long lastSwitchReadAt = millis();
+    Serial.print("Baslangic: ");
+    Serial.println(this->KarkasBeginsAt);
+  }
+  else if (strcmp(position, "Second") == 0)
+  {
+    this->KarkasEndsAt = y->CurrentPosition;
 
-    while (state == HIGH)
-    {
-        vargel->Step();
+    Serial.print("Bitis: ");
+    Serial.println(this->KarkasEndsAt);
 
-        if (millis() - lastSwitchReadAt > 30)
-        {
-            lastSwitchReadAt = millis();
-            state = digitalRead(vargel->MinSwitchPin);
-        }
-    }
-
-    Serial.println(F("Offset: Bitti"));
+    long delta = y->CurrentPosition * -1;
+    this->Move(y->Axis, delta, 300);
+  }
 }
 
 void MotorController::Move(char axis, long steps, uint16_t speed)
 {
-    Motor *target = this->Find(axis);
+  Motor *target = this->Find(axis);
 
-    if (target != NULL)
-    {
-        Serial.println(target->Axis);
-        Serial.println(steps);
+  if (target != NULL)
+  {
+    Serial.println(target->Axis);
+    Serial.println(steps);
 
-        target->SetSpeed(speed);
+    target->SetSpeed(speed);
 
-        if (steps < 0)
-            target->SetDirection(Backwards);
-        else
-            target->SetDirection(Forwards);
+    if (steps < 0)
+      target->SetDirection(Backwards);
+    else
+      target->SetDirection(Forwards);
 
-        long delta = abs(steps);
-        target->StepsRemaining = delta;
-    }
+    long delta = abs(steps);
+    target->StepsRemaining = delta;
+  }
 }
 
 bool MotorController::IsCompleted()
 {
-    Motor *x = this->Motors[0];
-    Motor *y = this->Motors[1];
+  Motor *x = this->Motors[0];
+  Motor *y = this->Motors[1];
 
-    return x->StepsRemaining == 0 && y->StepsRemaining == 0;
+  return x->StepsRemaining == 0 && y->StepsRemaining == 0;
 }
 
 void MotorController::Sync()
 {
-    for (uint8_t i = 0; i < 2; i++)
-    {
-        Motor *target = this->Motors[i];
+  for (uint8_t i = 0; i < 2; i++)
+  {
+    Motor *target = this->Motors[i];
 
-        if (target->StepsRemaining > 0)
-            target->Step();
-    }
+    if (target->StepsRemaining > 0)
+      target->Step();
+  }
 }
 
 Motor *MotorController::Find(char axis)
 {
-    for (uint8_t i = 0; i < 2; i++)
-    {
-        if (this->Motors[i]->Axis == axis)
-            return this->Motors[i];
-    }
+  for (uint8_t i = 0; i < 2; i++)
+  {
+    if (this->Motors[i]->Axis == axis)
+      return this->Motors[i];
+  }
 
-    return NULL;
+  return NULL;
 }
 
-void MotorController::Halt() {
-    Motor* x = this->Motors[0];
-    Motor* y = this->Motors[1];
+void MotorController::Halt()
+{
+  Motor *x = this->Motors[0];
+  Motor *y = this->Motors[1];
 
-    x->StepsRemaining = 0;
-    y->StepsRemaining = 0;
+  x->StepsRemaining = 0;
+  y->StepsRemaining = 0;
 }
 
 /*/void MotorController::LinearMove(long steps1, long steps2, Motor *first, Motor *second) {
