@@ -1,7 +1,8 @@
 #include "Motor.h"
 #include <Arduino.h>
 
-Motor::Motor(uint8_t pulsePin, uint8_t dirPin, char axis, uint16_t microStepMultiplier) {
+Motor::Motor(uint8_t pulsePin, uint8_t dirPin, char axis, uint16_t microStepMultiplier)
+{
     this->PulsePin = pulsePin;
     this->DirPin = dirPin;
     this->Axis = axis;
@@ -16,26 +17,39 @@ Motor::Motor(uint8_t pulsePin, uint8_t dirPin, char axis, uint16_t microStepMult
     this->SetSpeed(200);
 }
 
-void Motor::Step() {
-    if (micros() - this->LastSteppedAt > this->StepInterval) {
-        this->LastSteppedAt = micros();
+void Motor::Step()
+{
+    while (true)
+    {
+        if (micros() - this->LastSteppedAt > this->StepInterval)
+        {
+            this->LastSteppedAt = micros();
 
-        digitalWrite(this->PulsePin, HIGH);
-        delayMicroseconds(1);
-        digitalWrite(this->PulsePin, LOW);
-        delayMicroseconds(1);
+            digitalWrite(this->PulsePin, HIGH);
+            delayMicroseconds(1);
+            digitalWrite(this->PulsePin, LOW);
+            delayMicroseconds(1);
+
+            break;
+        }
     }
 }
 
-void Motor::SetSpeed(uint16_t speed) {
-    this->StepInterval = (60000000 / (speed * 200 * this->MicrostepMultiplier)) - 2;
+void Motor::SetSpeed(uint16_t speed)
+{
+    unsigned long divider = (unsigned long)speed * (unsigned long)200 * (unsigned long)this->MicrostepMultiplier;
+    this->StepInterval = (60000000 / divider) - 2;
     this->MaxSpeed = speed;
 
-    Serial.print("Interval: ");
+    /*/Serial.print("Interval: ");
     Serial.println(this->StepInterval);
+
+    Serial.print("Divider: ");
+    Serial.println(divider);*/
 }
 
-void Motor::SetLimitSwitches(uint8_t minSwitchPin, uint8_t maxSwitchPin) {
+void Motor::SetLimitSwitches(uint8_t minSwitchPin, uint8_t maxSwitchPin)
+{
     pinMode(minSwitchPin, INPUT_PULLUP);
     pinMode(maxSwitchPin, INPUT_PULLUP);
 
@@ -43,7 +57,8 @@ void Motor::SetLimitSwitches(uint8_t minSwitchPin, uint8_t maxSwitchPin) {
     this->MaxSwitchPin = maxSwitchPin;
 }
 
-void Motor::SetDirection(int8_t direction) {
+void Motor::SetDirection(int8_t direction)
+{
     digitalWrite(this->DirPin, direction == 1 ? HIGH : LOW);
     this->Direction = direction;
 }

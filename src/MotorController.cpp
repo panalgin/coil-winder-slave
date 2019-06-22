@@ -33,7 +33,7 @@ void MotorController::Offset()
     Serial.println(F("Offset: Bitti"));
 }
 
-void MotorController::Move(char axis, long steps)
+void MotorController:: Move(char axis, long steps)
 {
     Motor *target = this->Find(axis);
 
@@ -47,8 +47,8 @@ void MotorController::Move(char axis, long steps)
         else
             target->SetDirection(Forwards);
 
-        uint8_t covered = 0;
-        uint8_t delta = abs(steps);
+        long covered = 0;
+        long delta = abs(steps);
 
         while (covered < delta)
         {
@@ -68,3 +68,54 @@ Motor *MotorController::Find(char axis)
 
     return NULL;
 }
+
+/*/void MotorController::LinearMove(long steps1, long steps2, Motor *first, Motor *second) {
+  long pos1 = first->GetCurrentPosition() + steps1;
+  long pos2 = second->GetCurrentPosition() + steps2;
+
+  this->LinearMoveTo(pos1, pos2, first, second);
+}
+
+void MotorController::LinearMoveTo(long pos1, long pos2, Motor *first, Motor *second) {  
+  first->PrepareTo(pos1);
+  second->PrepareTo(pos2);
+
+  long m_DeltaX = first->StepsRemaining;
+  long m_DeltaY = second->StepsRemaining;
+
+  long m_Index;
+  long m_Over = 0;
+
+  if (m_DeltaX > m_DeltaY) {    
+    for(m_Index = 0; m_Index < m_DeltaX; ++m_Index) { 
+      if (first->UseRamping)     
+        this->CalculateRamp(m_DeltaX, m_Index, first);
+
+      first->Step();
+      m_Over += m_DeltaY;
+
+      if (m_Over >= m_DeltaX) {
+        m_Over -= m_DeltaX;
+        second->Step();
+      }
+    }
+
+    first->SetSpeed(first->MaxSpeed);
+  }
+  else {
+    for(m_Index = 0; m_Index < m_DeltaY; ++m_Index) { 
+      if (second->UseRamping)     
+        this->CalculateRamp(m_DeltaY, m_Index, second);
+
+      second->Step();
+      m_Over += m_DeltaX;
+
+      if (m_Over >= m_DeltaY) {
+        m_Over -= m_DeltaY;
+        first->Step();
+      }
+    }
+
+    second->SetSpeed(second->MaxSpeed);
+  }
+}*/

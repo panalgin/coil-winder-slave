@@ -22,7 +22,7 @@ void setup()
   controller.Initialize();
 
   vargelMotor.SetLimitSwitches(A2, A3);
-  vargelMotor.SetSpeed(100);
+  vargelMotor.SetSpeed(400);
 
   controller.Motors[0] = &mainMotor;
   controller.Motors[1] = &vargelMotor;
@@ -46,11 +46,10 @@ void loop()
 
   //loopSteps();
 
-  //controller.Move('Y', 100000);
-
-  while(true) {
-    vargelMotor.Step();
-  }
+  controller.Move('Y', 2000);
+  delay(200);
+  controller.Move('Y', -2000);
+  delay(200);
 }
 
 bool supposedToRun = false;
