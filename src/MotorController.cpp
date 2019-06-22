@@ -7,11 +7,12 @@ MotorController::MotorController()
 
 void MotorController::Initialize()
 {
+  
 }
 
 void MotorController::Offset(const char* position)
 {
-  Motor *y = this->Motors[0];
+  Motor *y = this->Find('Y');
 
   if (strcmp(position, "First") == 0)
   {
@@ -27,9 +28,6 @@ void MotorController::Offset(const char* position)
 
     Serial.print("Bitis: ");
     Serial.println(this->KarkasEndsAt);
-
-    long delta = y->CurrentPosition * -1;
-    this->Move(y->Axis, delta, 300);
   }
 }
 

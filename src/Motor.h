@@ -17,6 +17,7 @@ protected:
     uint16_t MaxSpeed;
 
 public:
+    float BaseMetricInSteps;
     unsigned long LastSteppedAt;
     unsigned long StepInterval;
     char Axis;

@@ -8,6 +8,7 @@ Motor::Motor(uint8_t pulsePin, uint8_t dirPin, char axis, uint16_t microStepMult
     this->Axis = axis;
     this->MicrostepMultiplier = microStepMultiplier;
     this->StepsRemaining = 0;
+    this->BaseMetricInSteps = 152.86625;
 
     pinMode(this->PulsePin, OUTPUT);
     pinMode(this->DirPin, OUTPUT);
