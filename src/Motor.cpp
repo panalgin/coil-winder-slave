@@ -21,15 +21,18 @@ void Motor::Step() {
         this->LastSteppedAt = micros();
 
         digitalWrite(this->PulsePin, HIGH);
-        delayMicroseconds(2);
+        delayMicroseconds(1);
         digitalWrite(this->PulsePin, LOW);
-        delayMicroseconds(2);
+        delayMicroseconds(1);
     }
 }
 
 void Motor::SetSpeed(uint16_t speed) {
     this->StepInterval = (60000000 / (speed * 200 * this->MicrostepMultiplier)) - 2;
     this->MaxSpeed = speed;
+
+    Serial.print("Interval: ");
+    Serial.println(this->StepInterval);
 }
 
 void Motor::SetLimitSwitches(uint8_t minSwitchPin, uint8_t maxSwitchPin) {
