@@ -10,14 +10,15 @@ class Motor
 private:
     uint8_t PulsePin;
     uint8_t DirPin;
-    uint16_t MicrostepMultiplier;
+
 
 protected:
     uint16_t CurrentSpeed;
-    uint16_t MaxSpeed;
 
 public:
     float BaseMetricInSteps;
+    uint16_t MicrostepMultiplier;
+    uint16_t StepsPerRev;
     unsigned long LastSteppedAt;
     unsigned long StepInterval;
     char Axis;
@@ -26,6 +27,11 @@ public:
     uint8_t MaxSwitchPin;
 
     int8_t Direction;
+    uint16_t MaxSpeed;
+
+    unsigned long ShortDistance;
+    uint16_t DwellSpeed;
+    uint16_t RampStartsAt;
 
     unsigned long StepsRemaining;
     long CurrentPosition;
@@ -35,6 +41,7 @@ public:
     void Step();
     void SetSpeed(uint16_t speed);
     void SetDirection(int8_t direction);
+    uint16_t GetSpeed();
 };
 
 #endif

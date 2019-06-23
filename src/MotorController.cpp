@@ -8,10 +8,9 @@ MotorController::MotorController()
 
 void MotorController::Initialize()
 {
-
 }
 
-void MotorController::Offset(const char* position)
+void MotorController::Offset(const char *position)
 {
   Motor *y = this->Find('Y');
 
@@ -63,13 +62,73 @@ bool MotorController::IsCompleted()
 
 void MotorController::Sync()
 {
-  for (uint8_t i = 0; i < 2; i++)
+  if (!this->IsMovingLinear)
   {
-    Motor *target = this->Motors[i];
+    for (uint8_t i = 0; i < 2; i++)
+    {
+      Motor *target = this->Motors[i];
 
-    if (target->StepsRemaining > 0)
-      target->Step();
+      if (target->StepsRemaining > 0)
+        target->Step();
+    }
   }
+  else
+  {
+    Motor *x = this->Motors[0];
+    Motor *y = this->Motors[1];
+
+    if (this->DeltaX > this->DeltaY)
+    {
+      if (this->LinearIndex < this->DeltaX)
+      {
+        ++this->LinearIndex;
+
+        this->CalculateRamp(this->DeltaX, this->LinearIndex, x);
+
+        x->Step();
+        this->LinearOvershoot += this->DeltaY;
+
+        if (this->LinearOvershoot >= this->DeltaX)
+        {
+          this->LinearOvershoot -= this->DeltaX;
+          y->Step();
+        }
+      }
+      else
+        this->FinishLinearMove();
+    }
+    else
+    {
+      if (this->LinearIndex < this->DeltaY)
+      {
+        ++this->LinearIndex;
+
+        this->CalculateRamp(this->DeltaY, this->LinearIndex, y);
+        y->Step();
+
+        this->LinearOvershoot += this->DeltaX;
+
+        if (this->LinearOvershoot >= this->DeltaY)
+        {
+          this->LinearOvershoot -= this->DeltaY;
+          x->Step();
+        }
+      }
+      else
+        this->FinishLinearMove();
+    }
+  }
+}
+
+void MotorController::FinishLinearMove()
+{
+  this->IsMovingLinear = false;
+  this->LinearIndex = 0;
+  Motor* x = this->Find('X');
+  Motor* y = this->Find('Y');
+
+  y->SetSpeed(y->MaxSpeed);
+  x->SetSpeed(x->MaxSpeed);
 }
 
 Motor *MotorController::Find(char axis)
@@ -92,53 +151,72 @@ void MotorController::Halt()
   y->StepsRemaining = 0;
 }
 
-/*/void MotorController::LinearMove(long steps1, long steps2, Motor *first, Motor *second) {
-  long pos1 = first->GetCurrentPosition() + steps1;
-  long pos2 = second->GetCurrentPosition() + steps2;
+void MotorController::LinearMove(char firstAxis, char secondAxis, long firstDelta, long secondDelta, uint16_t speed)
+{
+  Motor *x = this->Find(firstAxis);
+  Motor *y = this->Find(secondAxis);
 
-  this->LinearMoveTo(pos1, pos2, first, second);
+  if (firstDelta < 0)
+    x->SetDirection(Backwards);
+  else
+    x->SetDirection(Forwards);
+
+  if (secondDelta < 0)
+    y->SetDirection(Backwards);
+  else
+    y->SetDirection(Forwards);
+  
+
+  unsigned long firstSteps = abs(firstDelta);
+  unsigned long secondSteps = abs(secondDelta);
+
+  x->StepsRemaining = firstSteps;
+  y->StepsRemaining = secondSteps;
+
+  x->SetSpeed(speed);
+  y->SetSpeed(speed);
+
+  x->MaxSpeed = speed;
+  y->MaxSpeed = speed;
+
+  this->DeltaX = x->StepsRemaining;
+  this->DeltaY = y->StepsRemaining;
+  this->LinearIndex = 0;
+  this->LinearOvershoot = 0;
+  this->IsMovingLinear = true;
 }
 
-void MotorController::LinearMoveTo(long pos1, long pos2, Motor *first, Motor *second) {  
-  first->PrepareTo(pos1);
-  second->PrepareTo(pos2);
+void MotorController::CalculateRamp(unsigned long delta, unsigned long index, Motor *motor)
+{
+  float currentRpm = 1.0;
+  unsigned long accelerationEndsAt = motor->ShortDistance / 2;             //(long)(m_DeltaY * 0.10);
+  unsigned long decelerationStartsAt = delta - (motor->ShortDistance / 2); //(long)(m_DeltaY * 0.90);
+  int maxRpm = max(1, motor->MaxSpeed);
+  int minRpm = max(1, motor->RampStartsAt);
 
-  long m_DeltaX = first->StepsRemaining;
-  long m_DeltaY = second->StepsRemaining;
-
-  long m_Index;
-  long m_Over = 0;
-
-  if (m_DeltaX > m_DeltaY) {    
-    for(m_Index = 0; m_Index < m_DeltaX; ++m_Index) { 
-      if (first->UseRamping)     
-        this->CalculateRamp(m_DeltaX, m_Index, first);
-
-      first->Step();
-      m_Over += m_DeltaY;
-
-      if (m_Over >= m_DeltaX) {
-        m_Over -= m_DeltaX;
-        second->Step();
-      }
+  if (delta < motor->ShortDistance)
+  {
+    if (index <= 0)
+    { // performance reasons
+      motor->SetSpeed(motor->DwellSpeed);
     }
-
-    first->SetSpeed(first->MaxSpeed);
   }
-  else {
-    for(m_Index = 0; m_Index < m_DeltaY; ++m_Index) { 
-      if (second->UseRamping)     
-        this->CalculateRamp(m_DeltaY, m_Index, second);
-
-      second->Step();
-      m_Over += m_DeltaX;
-
-      if (m_Over >= m_DeltaY) {
-        m_Over -= m_DeltaY;
-        first->Step();
+  else
+  {
+    if (index <= accelerationEndsAt || index >= decelerationStartsAt)
+    {
+      if (index <= accelerationEndsAt)
+      {
+        currentRpm = max(1, minRpm + ((maxRpm - minRpm) * ((float)index / (float)accelerationEndsAt)));
+        motor->SetSpeed(currentRpm);
       }
+      else if (index >= decelerationStartsAt)
+      {
+        currentRpm = max(1, minRpm + ((maxRpm - minRpm) * (1 - ((float)index / (float)delta)) / (1 - ((float)decelerationStartsAt / (float)delta))));
+        motor->SetSpeed(currentRpm);
+      }
+      else
+        motor->SetSpeed(maxRpm);
     }
-
-    second->SetSpeed(second->MaxSpeed);
   }
-}*/
+}

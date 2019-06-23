@@ -17,11 +17,16 @@ public:
     bool IsCompleted();
     void Sync();
     void Halt();
-
+    void LinearMove(char firstAxis, char secondAxis, long firstDelta, long secondDelta, uint16_t speed);
+    void CalculateRamp(unsigned long delta, unsigned long index, Motor *motor);
+    void FinishLinearMove();
 
     long KarkasBeginsAt;
     long KarkasEndsAt;
     float BaseMetricInSteps;
+    bool IsMovingLinear;
+
+    unsigned long LinearIndex, LinearOvershoot, DeltaX, DeltaY;
 };
 
 #endif
