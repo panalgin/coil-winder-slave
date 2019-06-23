@@ -18,15 +18,18 @@ typedef struct
 
 typedef struct
 {
-  float SpirIndex;
-  float SpirTotal;
+  uint16_t SpirIndex;
+  uint16_t SpirTotal;
+  uint16_t WorkingCycle;
+  bool IsPaused;
   float WireDiameter;
   float TurnsPerLayer;
   uint16_t Speed;
   bool IsAtEnd;
 } Job;
 
-Job CurrentJob = Job();
+Job CJob = Job();
+Job *CurrentJob;
 
 Motor mainMotor(8, 5, 'X', 8);
 Motor vargelMotor(9, 6, 'Y', 16);
@@ -40,13 +43,17 @@ void parseMessage(String *message);
 void loopSteps();
 void parseWork(String *message);
 String SplitValues(String *data, char seperator, uint8_t index);
+void pauseWork();
 
 void setup()
 {
   delay(100);
   com.begin(115200);
 
-  while(!com) {;}
+  while (!com)
+  {
+    ;
+  }
   Serial.begin(115200);
 
   controller.Initialize();
@@ -121,7 +128,12 @@ void loopSteps()
 
   if (!controller.IsCompleted())
   {
-    controller.Sync();
+    if (CurrentJob != NULL) {
+      if (!CurrentJob->IsPaused)
+        controller.Sync();
+    }
+    else
+      controller.Sync();
   }
 }
 
@@ -129,7 +141,10 @@ void parseMessage(String *message)
 {
   message->replace("\r", "");
 
-  if (message->startsWith("Offset-First"))
+  if (message->startsWith("Pause"))
+    pauseWork();
+
+  else if (message->startsWith("Offset-First"))
   {
     controller.Offset("First");
 
@@ -182,24 +197,52 @@ void parseMessage(String *message)
   *message = "";
 }
 
+void pauseWork() {
+  if (CurrentJob != NULL) {
+    CurrentJob->IsPaused = true;
+  }
+}
+
 void parseWork(String *message)
 {
   message->replace("Work: ", "");
 
-  uint16_t currentSpir = SplitValues(message, '|', 0).toInt();
+  uint16_t currentCycle = SplitValues(message, '|', 0).toInt();
   float wireDiameter = SplitValues(message, '|', 1).toFloat();
   uint16_t speed = (uint16_t)SplitValues(message, '|', 2).toInt();
 
   float totalGap = (controller.KarkasEndsAt - controller.KarkasBeginsAt) / controller.BaseMetricInSteps;
   float turnsPerLayer = totalGap / wireDiameter;
 
-  long firstDelta = (unsigned long)(mainMotor.StepsPerRev * mainMotor.MicrostepMultiplier) * turnsPerLayer;
-  long secondDelta = (totalGap * vargelMotor.BaseMetricInSteps) * (currentSpir % 2 == 0 ? 1.0f : -1.0f);
+  if (CurrentJob == NULL)
+  {
+    CurrentJob = &CJob;
+    CurrentJob->IsPaused = false;
+    CurrentJob->Speed = speed;
+    CurrentJob->IsAtEnd = false;
+    CurrentJob->SpirIndex = 0;
+    CurrentJob->TurnsPerLayer = turnsPerLayer;
+    CurrentJob->WireDiameter = wireDiameter;
+    CurrentJob->WorkingCycle = currentCycle;
 
-  Parameter params = {{'X', 'Y'}, {firstDelta, secondDelta}, speed};
-  Gcode code = {2, params};
+    long firstDelta = (unsigned long)(mainMotor.StepsPerRev * mainMotor.MicrostepMultiplier) * turnsPerLayer;
+    long secondDelta = (totalGap * vargelMotor.BaseMetricInSteps) * (currentCycle % 2 == 0 ? 1.0f : -1.0f);
 
-  Codes.push(code);
+    Parameter params = {{'X', 'Y'}, {firstDelta, secondDelta}, speed};
+    Gcode code = {2, params};
+
+    Codes.push(code);
+  }
+  else
+  {
+    CurrentJob->IsPaused = false;
+    CurrentJob->Speed = speed;
+    CurrentJob->IsAtEnd = false;
+    CurrentJob->WorkingCycle = currentCycle;
+
+    vargelMotor.SetSpeed(speed);
+    mainMotor.SetSpeed(speed);
+  }
 }
 
 String SplitValues(String *data, char seperator, uint8_t index)
