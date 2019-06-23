@@ -43,7 +43,10 @@ String SplitValues(String *data, char seperator, uint8_t index);
 
 void setup()
 {
+  delay(100);
   com.begin(115200);
+
+  while(!com) {;}
   Serial.begin(115200);
 
   controller.Initialize();
@@ -129,14 +132,20 @@ void parseMessage(String *message)
   if (message->startsWith("Offset-First"))
   {
     controller.Offset("First");
-    com.println("Offset-First-Done");
+
+    float firstPos = (float)(controller.KarkasBeginsAt / controller.BaseMetricInSteps);
+    com.print("OFD: ");
+    com.println(firstPos);
   }
   else if (message->startsWith("Offset-Second"))
   {
     controller.Offset("Second");
     Motor *y = controller.Find('Y');
     long delta = y->CurrentPosition * -1;
-    com.println("Offset-Second-Done");
+
+    float secondPos = (float)(controller.KarkasEndsAt / controller.BaseMetricInSteps);
+    com.print("OSD: ");
+    com.println(secondPos);
 
     delay(500);
 
@@ -177,26 +186,17 @@ void parseWork(String *message)
 {
   message->replace("Work: ", "");
 
-  float wireDiameter = SplitValues(message, '|', 0).toFloat();
-  float totalTurns = SplitValues(message, '|', 1).toFloat();
+  uint16_t currentSpir = SplitValues(message, '|', 0).toInt();
+  float wireDiameter = SplitValues(message, '|', 1).toFloat();
   uint16_t speed = (uint16_t)SplitValues(message, '|', 2).toInt();
 
   float totalGap = (controller.KarkasEndsAt - controller.KarkasBeginsAt) / controller.BaseMetricInSteps;
   float turnsPerLayer = totalGap / wireDiameter;
 
-  Serial.print("Tel Capi: ");
-  Serial.println(wireDiameter);
-  Serial.print("Toplam Spir: ");
-  Serial.println(totalTurns);
-  Serial.print("Karkas Boslugu: ");
-  Serial.println(totalGap);
-  Serial.print("Her sira tur: ");
-  Serial.println(turnsPerLayer);
-
   long firstDelta = (unsigned long)(mainMotor.StepsPerRev * mainMotor.MicrostepMultiplier) * turnsPerLayer;
-  long secondDelta = totalGap * vargelMotor.BaseMetricInSteps;
+  long secondDelta = (totalGap * vargelMotor.BaseMetricInSteps) * (currentSpir % 2 == 0 ? 1.0f : -1.0f);
 
-  Parameter params = {{'X', 'Y'}, {firstDelta, secondDelta}, 20};
+  Parameter params = {{'X', 'Y'}, {firstDelta, secondDelta}, speed};
   Gcode code = {2, params};
 
   Codes.push(code);
