@@ -20,11 +20,14 @@ public:
     void LinearMove(char firstAxis, char secondAxis, long firstDelta, long secondDelta, uint16_t speed);
     void CalculateRamp(unsigned long delta, unsigned long index, Motor *motor);
     void FinishLinearMove();
+    void RampDown();
 
     long KarkasBeginsAt;
     long KarkasEndsAt;
     float BaseMetricInSteps;
     bool IsMovingLinear;
+    bool ShouldRampUp;
+    bool ShouldRampDown;
 
     unsigned long LinearIndex, LinearOvershoot, DeltaX, DeltaY;
 };

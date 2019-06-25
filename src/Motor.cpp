@@ -14,7 +14,7 @@ Motor::Motor(uint8_t pulsePin, uint8_t dirPin, char axis, uint16_t microStepMult
 
     this->ShortDistance = 8 * this->BaseMetricInSteps;
     this->DwellSpeed = 10;
-    this->RampStartsAt = 20;
+    this->RampStartsAt = 10;
 
     pinMode(this->PulsePin, OUTPUT);
     pinMode(this->DirPin, OUTPUT);
@@ -27,7 +27,8 @@ Motor::Motor(uint8_t pulsePin, uint8_t dirPin, char axis, uint16_t microStepMult
 
 void Motor::Step()
 {
-    if (this->StepsRemaining > 0) {
+    if (this->StepsRemaining > 0)
+    {
         while (true)
         {
             if (micros() - this->LastSteppedAt > this->StepInterval)
@@ -46,7 +47,7 @@ void Motor::Step()
                     this->CurrentPosition--;
                 else
                     this->CurrentPosition++;
-                    
+
                 break;
             }
         }
@@ -55,9 +56,12 @@ void Motor::Step()
 
 void Motor::SetSpeed(uint16_t speed)
 {
-    unsigned long divider = (unsigned long)speed * (unsigned long)200 * (unsigned long)this->MicrostepMultiplier;
-    this->StepInterval = (60000000 / divider) - 2;
-    this->CurrentSpeed = speed;
+    if (this->CurrentSpeed != speed)
+    {
+        unsigned long divider = (unsigned long)speed * (unsigned long)200 * (unsigned long)this->MicrostepMultiplier;
+        this->StepInterval = (60000000 / divider) - 2;
+        this->CurrentSpeed = speed;
+    }
 
     /*/Serial.print("Interval: ");
     Serial.println(this->StepInterval);
@@ -79,11 +83,12 @@ void Motor::SetDirection(int8_t direction)
 {
     uint8_t inHigh = this->IsDirInverted ? LOW : HIGH;
     uint8_t inLow = this->IsDirInverted ? HIGH : LOW;
-    
+
     digitalWrite(this->DirPin, direction == 1 ? inHigh : inLow);
     this->Direction = direction;
 }
 
-uint16_t Motor::GetSpeed() {
+uint16_t Motor::GetSpeed()
+{
     return this->CurrentSpeed;
 }

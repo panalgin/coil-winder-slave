@@ -77,6 +77,12 @@ void MotorController::Sync()
     Motor *x = this->Motors[0];
     Motor *y = this->Motors[1];
 
+    if (this->ShouldRampDown && (x->GetSpeed() <= x->DwellSpeed || y->GetSpeed() <= y->DwellSpeed))
+      this->ShouldRampDown = false;
+
+    if (this->ShouldRampUp && (x->GetSpeed() >= x->MaxSpeed))
+      this->ShouldRampUp = false;
+
     if (this->DeltaX > this->DeltaY)
     {
       if (this->LinearIndex < this->DeltaX)
@@ -124,8 +130,8 @@ void MotorController::FinishLinearMove()
 {
   this->IsMovingLinear = false;
   this->LinearIndex = 0;
-  Motor* x = this->Find('X');
-  Motor* y = this->Find('Y');
+  Motor *x = this->Find('X');
+  Motor *y = this->Find('Y');
 
   y->SetSpeed(y->MaxSpeed);
   x->SetSpeed(x->MaxSpeed);
@@ -151,6 +157,10 @@ void MotorController::Halt()
   y->StepsRemaining = 0;
 }
 
+void MotorController::RampDown()
+{
+}
+
 void MotorController::LinearMove(char firstAxis, char secondAxis, long firstDelta, long secondDelta, uint16_t speed)
 {
   Motor *x = this->Find(firstAxis);
@@ -165,7 +175,6 @@ void MotorController::LinearMove(char firstAxis, char secondAxis, long firstDelt
     y->SetDirection(Backwards);
   else
     y->SetDirection(Forwards);
-  
 
   unsigned long firstSteps = abs(firstDelta);
   unsigned long secondSteps = abs(secondDelta);
@@ -191,7 +200,29 @@ void MotorController::CalculateRamp(unsigned long delta, unsigned long index, Mo
   float currentRpm = 1.0;
   unsigned long accelerationEndsAt = motor->ShortDistance / 2;             //(long)(m_DeltaY * 0.10);
   unsigned long decelerationStartsAt = delta - (motor->ShortDistance / 2); //(long)(m_DeltaY * 0.90);
-  int maxRpm = max(1, motor->MaxSpeed);
+
+  int maxSpeedCandidate = motor->MaxSpeed;
+
+  if (this->ShouldRampDown && motor->GetSpeed() > motor->DwellSpeed)
+  {
+    if (abs(index - motor->LastSpeedChangeOnDelta) > 3)
+    {
+      motor->LastSpeedChangeOnDelta = index;
+      maxSpeedCandidate = motor->GetSpeed() - 1;
+      motor->SetSpeed(maxSpeedCandidate);
+    }
+  }
+  else if (index >= accelerationEndsAt && this->ShouldRampUp && motor->GetSpeed() < motor->MaxSpeed) {
+    if (abs(index - motor->LastSpeedChangeOnDelta) > 15) {
+      motor->LastSpeedChangeOnDelta = index;
+      maxSpeedCandidate = motor->GetSpeed() + 1;
+      motor->SetSpeed(maxSpeedCandidate);
+
+      //Serial.println(maxSpeedCandidate);
+    }
+  }
+
+  int maxRpm = max(1, maxSpeedCandidate);
   int minRpm = max(1, motor->RampStartsAt);
 
   if (delta < motor->ShortDistance)
