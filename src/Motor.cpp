@@ -40,6 +40,7 @@ void Motor::Step()
                 delayMicroseconds(1);
 
                 this->StepsRemaining--;
+                this->TotalStepsTaken++;
 
                 if (this->Direction == -1)
                     this->CurrentPosition--;
@@ -76,7 +77,10 @@ void Motor::SetLimitSwitches(uint8_t minSwitchPin, uint8_t maxSwitchPin)
 
 void Motor::SetDirection(int8_t direction)
 {
-    digitalWrite(this->DirPin, direction == 1 ? HIGH : LOW);
+    uint8_t inHigh = this->IsDirInverted ? LOW : HIGH;
+    uint8_t inLow = this->IsDirInverted ? HIGH : LOW;
+    
+    digitalWrite(this->DirPin, direction == 1 ? inHigh : inLow);
     this->Direction = direction;
 }
 

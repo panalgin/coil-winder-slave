@@ -25,6 +25,7 @@ public:
 
     uint8_t MinSwitchPin;
     uint8_t MaxSwitchPin;
+    bool IsDirInverted;
 
     int8_t Direction;
     uint16_t MaxSpeed;
@@ -34,6 +35,7 @@ public:
     uint16_t RampStartsAt;
 
     unsigned long StepsRemaining;
+    unsigned long TotalStepsTaken;
     long CurrentPosition;
 
     Motor(uint8_t pulsePin, uint8_t dirPin, char axis, uint16_t microStepMultiplier);

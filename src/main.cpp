@@ -48,23 +48,51 @@ void pauseWork();
 void setup()
 {
   delay(100);
-  com.begin(115200);
+  com.begin(2400);
 
   while (!com)
   {
     ;
   }
+  
   Serial.begin(115200);
 
   controller.Initialize();
 
   vargelMotor.SetLimitSwitches(A2, A3);
+  vargelMotor.IsDirInverted = true;
   vargelMotor.SetSpeed(400);
 
   controller.Motors[0] = &mainMotor;
   controller.Motors[1] = &vargelMotor;
 
   //Gcode code = {'Y', (long)(100.0f * vargelMotor.BaseMetricInSteps), 100, true};
+
+  // TIMER 1 for interrupt frequency 500 Hz:
+  cli();      // stop interrupts
+  TCCR1A = 0; // set entire TCCR1A register to 0
+  TCCR1B = 0; // same for TCCR1B
+  TCNT1 = 0;  // initialize counter value to 0
+  // set compare match register for 500 Hz increments
+  OCR1A = 31999; // = 16000000 / (1 * 500) - 1 (must be <65536)
+  // turn on CTC mode
+  TCCR1B |= (1 << WGM12);
+  // Set CS12, CS11 and CS10 bits for 1 prescaler
+  TCCR1B |= (0 << CS12) | (0 << CS11) | (1 << CS10);
+  // enable timer compare interrupt
+  TIMSK1 |= (1 << OCIE1A);
+  sei(); // allow interrupts
+}
+
+ISR(TIMER1_COMPA_vect) {
+  if (CurrentJob != NULL) {
+    uint16_t spirCheck = mainMotor.TotalStepsTaken / (mainMotor.StepsPerRev * mainMotor.MicrostepMultiplier);
+    
+    if (spirCheck != CurrentJob->SpirIndex)
+    {
+      CurrentJob->SpirIndex = spirCheck;
+    }
+  }
 }
 
 String incomingMessage = "";
@@ -88,6 +116,7 @@ void loop()
 
 bool supposedToRun = false;
 long lastSteps = 0;
+uint16_t lastSpirIndex = 0;
 
 void loopSteps()
 {
@@ -128,12 +157,31 @@ void loopSteps()
 
   if (!controller.IsCompleted())
   {
-    if (CurrentJob != NULL) {
+    if (CurrentJob != NULL)
+    {
       if (!CurrentJob->IsPaused)
+      {
         controller.Sync();
+
+        if (lastSpirIndex != CurrentJob->SpirIndex) {
+          //com.print("Spir: "); com.println(CurrentJob->SpirIndex);
+          //Serial.print("Spir: "); Serial.println(CurrentJob->SpirIndex);
+
+          lastSpirIndex = CurrentJob->SpirIndex;
+        }
+      }
     }
     else
       controller.Sync();
+  }
+  else
+  {
+    if (CurrentJob != NULL && CurrentJob->IsAtEnd != false)
+    {
+      CurrentJob->IsAtEnd = true;
+      com.println("CycleFinished: ");
+      com.println(CurrentJob->WorkingCycle);
+    }
   }
 }
 
@@ -197,8 +245,10 @@ void parseMessage(String *message)
   *message = "";
 }
 
-void pauseWork() {
-  if (CurrentJob != NULL) {
+void pauseWork()
+{
+  if (CurrentJob != NULL)
+  {
     CurrentJob->IsPaused = true;
   }
 }
@@ -241,7 +291,9 @@ void parseWork(String *message)
     CurrentJob->WorkingCycle = currentCycle;
 
     vargelMotor.SetSpeed(speed);
-    mainMotor.SetSpeed(speed);
+    mainMotor.SetSpeed(speed); 
+
+    //Add next reverse or forward cycle delta
   }
 }
 
