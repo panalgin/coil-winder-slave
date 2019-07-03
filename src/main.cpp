@@ -141,11 +141,15 @@ void loopSteps()
   }
   else
   {
-    if (CurrentJob != NULL && CurrentJob->IsAtEnd != false)
+    if (CurrentJob != NULL && CurrentJob->IsAtEnd == false)
     {
       CurrentJob->IsAtEnd = true;
-      com.println("CycleFinished: ");
+
+      com.print("CycleFinished: ");
       com.println(CurrentJob->WorkingCycle);
+
+      Serial.print("CycleFinished: ");
+      Serial.println(CurrentJob->WorkingCycle);
     }
   }
 }
@@ -265,6 +269,20 @@ void parseWork(String *message)
   {
     CurrentJob->IsPaused = false;
     CurrentJob->Speed = speed;
+
+    if (CurrentJob->WorkingCycle != currentCycle)
+    {
+      long firstDelta = (unsigned long)(mainMotor.StepsPerRev * mainMotor.MicrostepMultiplier) * turnsPerLayer;
+      long secondDelta = (totalGap * vargelMotor.BaseMetricInSteps) * (currentCycle % 2 == 0 ? 1.0f : -1.0f);
+
+      Parameter params = {{'X', 'Y'}, {firstDelta, secondDelta}, speed};
+      Gcode code = {2, params};
+
+      Codes.push(code);
+
+      Serial.println("New path aligned.");
+    }
+
     CurrentJob->IsAtEnd = false;
     CurrentJob->WorkingCycle = currentCycle;
 
