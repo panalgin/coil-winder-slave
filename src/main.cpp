@@ -59,7 +59,7 @@ void setup()
 
   controller.Initialize();
 
-  vargelMotor.SetLimitSwitches(A2, A3);
+  vargelMotor.SetLimitSwitches(A1, A3);
   vargelMotor.IsDirInverted = true;
   vargelMotor.SetSpeed(400);
 
@@ -183,20 +183,27 @@ void parseMessage(String *message)
   }
   else if (message->startsWith("Offset-Second"))
   {
-    controller.Offset("Second");
+    message->replace("Offset-Second ", "");
+
+    float karkasWidth = message->toFloat();
+
     Motor *y = controller.Find('Y');
-    long delta = y->CurrentPosition * -1;
+    long delta = (long)(karkasWidth * y->BaseMetricInSteps);
+
+    controller.BlockMove('Y', delta, 300);
+
+    controller.Offset("Second");
 
     float secondPos = (float)(controller.KarkasEndsAt / controller.BaseMetricInSteps);
     com.print("OSD: ");
     com.println(secondPos);
 
+    //controller.Move('Y', delta, 300);
+
     delay(500);
 
-    Parameter p = {{'Y'}, {delta}, 300};
-    Gcode code = {0, p};
-
-    Codes.push(code);
+    delta = y->CurrentPosition * -1;
+    controller.BlockMove('Y', delta, 300);
   }
 
   else if (message->startsWith("Left"))

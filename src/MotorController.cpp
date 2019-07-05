@@ -16,11 +16,31 @@ void MotorController::Offset(const char *position)
 
   if (strcmp(position, "First") == 0)
   {
-    y->CurrentPosition = 0;
-    this->KarkasBeginsAt = y->CurrentPosition;
+    uint8_t sensorState = digitalRead(y->MinSwitchPin);
+    unsigned long lastReadAt = 0;
 
-    Serial.print("Baslangic: ");
-    Serial.println(this->KarkasBeginsAt);
+    y->SetDirection(Backwards);
+    y->StepsRemaining = UINT32_MAX;
+    y->SetSpeed(10);
+
+    while(sensorState == HIGH) {
+      if (millis() - lastReadAt > 10) {
+        lastReadAt = millis();
+
+        sensorState = digitalRead(y->MinSwitchPin);
+      }
+
+      y->Step();
+
+      if (sensorState == LOW)
+        break;
+    }
+    
+    y->TotalStepsTaken = 0;
+    y->StepsRemaining = 0;
+    y->CurrentPosition = 0;
+
+    this->KarkasBeginsAt = y->CurrentPosition;
   }
   else if (strcmp(position, "Second") == 0)
   {
@@ -28,6 +48,30 @@ void MotorController::Offset(const char *position)
 
     Serial.print("Bitis: ");
     Serial.println(this->KarkasEndsAt);
+  }
+}
+
+void MotorController::BlockMove(char axis, long steps, uint16_t speed) {
+  Motor *target = this->Find(axis);
+
+  if (target != NULL)
+  {
+    Serial.println(target->Axis);
+    Serial.println(steps);
+
+    target->SetSpeed(speed);
+
+    if (steps < 0)
+      target->SetDirection(Backwards);
+    else
+      target->SetDirection(Forwards);
+
+    long delta = abs(steps);
+    target->StepsRemaining = delta;
+
+    while(target->StepsRemaining > 0) {
+      target->Step();
+    }
   }
 }
 
@@ -155,10 +199,6 @@ void MotorController::Halt()
 
   x->StepsRemaining = 0;
   y->StepsRemaining = 0;
-}
-
-void MotorController::RampDown()
-{
 }
 
 void MotorController::LinearMove(char firstAxis, char secondAxis, long firstDelta, long secondDelta, uint16_t speed)
