@@ -59,6 +59,7 @@ void setup()
 
   controller.Initialize();
 
+  mainMotor.BaseMetricInSteps = 152.0f;
   vargelMotor.SetLimitSwitches(A1, A3);
   vargelMotor.IsDirInverted = true;
   vargelMotor.SetSpeed(400);
@@ -198,9 +199,7 @@ void parseMessage(String *message)
     com.print("OSD: ");
     com.println(secondPos);
 
-    //controller.Move('Y', delta, 300);
-
-    delay(500);
+    //delay(500);
 
     delta = y->CurrentPosition * -1;
     controller.BlockMove('Y', delta, 300);
@@ -208,14 +207,14 @@ void parseMessage(String *message)
 
   else if (message->startsWith("Left"))
   {
-    Parameter p = {{'Y'}, {-10}, 10};
+    Parameter p = {{'Y'}, {-10}, 50};
     Gcode code = {1, p};
 
     Codes.push(code);
   }
   else if (message->startsWith("Right"))
   {
-    Parameter p = {{'Y'}, {10}, 10};
+    Parameter p = {{'Y'}, {10}, 50};
     Gcode code = {1, p};
 
     Codes.push(code);

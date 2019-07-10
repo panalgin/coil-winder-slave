@@ -3,7 +3,7 @@
 
 MotorController::MotorController()
 {
-  this->BaseMetricInSteps = 152.86625;
+  this->BaseMetricInSteps = 800.0f;
 }
 
 void MotorController::Initialize()
@@ -21,7 +21,7 @@ void MotorController::Offset(const char *position)
 
     y->SetDirection(Backwards);
     y->StepsRemaining = UINT32_MAX;
-    y->SetSpeed(10);
+    y->SetSpeed(250);
 
     while(sensorState == HIGH) {
       if (millis() - lastReadAt > 10) {
